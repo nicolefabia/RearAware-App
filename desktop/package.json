@@ -1,0 +1,14 @@
+{
+  "name": "rearaware-desktop",
+  "version": "0.1.0",
+  "description": "RearAware desktop app - detects and censors cat butts in your webcam feed via a virtual camera.",
+  "main": "src/main/index.js",
+  "private": true,
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^43.0.0",
+    "electron-builder": "^26.15.3"
+  }
+}
