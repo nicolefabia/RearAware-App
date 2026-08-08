@@ -5,10 +5,52 @@
   "main": "src/main/index.js",
   "private": true,
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
   },
   "devDependencies": {
     "electron": "^43.0.0",
     "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.rearaware.desktop",
+    "productName": "RearAware",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build-resources"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../engine/dist/rearaware-engine",
+        "to": "engine",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../assets",
+        "to": "assets",
+        "filter": ["**/*"]
+      }
+    ],
+    "mac": {
+      "icon": "../assets/icons/app-icon.icns",
+      "category": "public.app-category.utilities",
+      "target": ["dmg"],
+      "extendInfo": {
+        "NSCameraUsageDescription": "RearAware needs camera access to detect and censor cats in your webcam feed.",
+        "LSUIElement": true
+      }
+    },
+    "win": {
+      "icon": "../assets/icons/app-icon.ico",
+      "target": ["nsis"]
+    },
+    "dmg": {
+      "title": "RearAware"
+    }
   }
 }

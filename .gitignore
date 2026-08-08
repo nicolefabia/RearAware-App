@@ -19,9 +19,9 @@ engine/build/
 engine/dist/
 engine/*.spec.bak
 
-# Local runtime state (contribution upload queue, logs, etc.)
+# Local runtime state (the contribution queue itself now lives outside the
+# repo, in Electron's userData directory - see desktop/src/main/paths.js)
 *.local.json
-engine/queue/
 
 # Secrets - see desktop/.env.example
 .env

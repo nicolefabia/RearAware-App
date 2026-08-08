@@ -49,17 +49,28 @@ def open_camera_session(device_index: int = 0, fps: int = 30, warmup_frames: int
     capture = cv2.VideoCapture(device_index)
     time.sleep(1)  # some webcams need a moment to warm up before the first read
 
-    # Discard a few frames before trusting the resolution - some webcams report
-    # one size on the very first read(s) and settle into a different one once
-    # actually streaming (send_frame() also guards against this at runtime).
-    frame = None
-    for _ in range(warmup_frames):
-        ok, frame = capture.read()
-        if not ok:
-            capture.release()
-            raise RuntimeError("couldn't read from webcam")
+    # Everything below can fail (bad frame, pyvirtualcam.Camera() raising if
+    # e.g. the OBS Virtual Camera extension isn't active) - if it does, this
+    # still needs to release `capture` before propagating, or the physical
+    # webcam handle leaks. That leak is suspected of contributing to macOS's
+    # camera subsystem getting stuck system-wide after a crash (observed
+    # during testing: every app, including ones unrelated to RearAware, lost
+    # access to all cameras until a reboot).
+    try:
+        # Discard a few frames before trusting the resolution - some webcams
+        # report one size on the very first read(s) and settle into a
+        # different one once actually streaming (send_frame() also guards
+        # against this at runtime).
+        frame = None
+        for _ in range(warmup_frames):
+            ok, frame = capture.read()
+            if not ok:
+                raise RuntimeError("couldn't read from webcam")
 
-    height, width = frame.shape[:2]
-    virtual_cam = pyvirtualcam.Camera(width=width, height=height, fps=fps)
+        height, width = frame.shape[:2]
+        virtual_cam = pyvirtualcam.Camera(width=width, height=height, fps=fps)
+    except Exception:
+        capture.release()
+        raise
 
     return CameraSession(capture=capture, virtual_cam=virtual_cam, width=width, height=height)

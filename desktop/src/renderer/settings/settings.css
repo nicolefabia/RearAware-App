@@ -1,0 +1,292 @@
+/* Native-feeling settings window: system fonts, OS light/dark appearance,
+   and mostly unstyled form controls so Chromium renders them using the
+   platform's own widget appearance (checkboxes, dropdowns, sliders) rather
+   than a custom-painted look. The only branding is the window title
+   ("RearAware", set in index.js) and the tray/app icon - nothing here. */
+
+:root {
+  --bg: #ececec;
+  --panel-bg: #ffffff;
+  --text: #1a1a1a;
+  --text-muted: #6e6e6e;
+  --border: #d0d0d0;
+  --accent: #0a68d6;
+  --tab-active-bg: #ffffff;
+  --danger: #c62828;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --panel-bg: #2b2b2b;
+    --text: #f0f0f0;
+    --text-muted: #9a9a9a;
+    --border: #3f3f3f;
+    --accent: #4a9eff;
+    --tab-active-bg: #3a3a3a;
+    --danger: #ff6b6b;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============ TABS ============ */
+
+.tabs {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  padding: 5px 18px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tab-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.tab[aria-selected="true"] {
+  background: var(--tab-active-bg);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.tab:hover:not([aria-selected="true"]) {
+  background: rgba(127, 127, 127, 0.12);
+}
+
+/* ============ PANELS ============ */
+
+/* :not([hidden]) - a bare ".panel { display: flex }" ties in specificity with
+   the browser default "[hidden] { display: none }", and author rules win
+   ties regardless of the hidden attribute, so both panels would show at
+   once. Same bug class as the review-grid empty-state fix earlier. */
+.panel:not([hidden]) {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.fieldset:disabled .field,
+.fieldset:disabled .section-label {
+  opacity: 0.45;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.field-row label:not(.checkbox-label) {
+  font-weight: 500;
+}
+
+.field-value {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.checkbox-label input {
+  margin: 0;
+}
+
+.help-text {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 15px;
+}
+
+.help-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.section-label {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+select,
+input[type="range"] {
+  font: inherit;
+}
+
+select {
+  padding: 3px 6px;
+}
+
+/* ============ TRAINING TAB ============ */
+
+.training-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-heading {
+  font-weight: 500;
+}
+
+.training-actions:not([hidden]) {
+  display: flex;
+  gap: 8px;
+}
+
+/* No max-height/overflow here on purpose - the whole page scrolls as one
+   surface (see body below), not a boxed-in sub-scroll for just the grid. */
+.review-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  padding: 2px; /* keeps card focus rings from clipping at the grid edge */
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--panel-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.thumb-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  background: #000;
+  overflow: hidden;
+}
+
+.thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.butt-box {
+  position: absolute;
+  border: 2px solid var(--danger);
+  pointer-events: none;
+}
+
+.card-actions {
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+}
+
+.card-actions .btn { flex: 1; }
+
+.card.is-removing { opacity: 0.4; pointer-events: none; }
+
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0;
+}
+
+/* ============ BUTTONS ============
+   Minimal, native-ish - not custom-painted brand buttons. */
+
+.btn {
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.btn:hover { background: rgba(127, 127, 127, 0.12); }
+
+/* Buttons inside a plain .field (column flex, default align-items: stretch)
+   would otherwise stretch to the field's full width - fine for the slider
+   in the General tab, wrong for a button meant to size to its own content. */
+.field > .btn { align-self: flex-start; }
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* .btn.btn-primary:hover (not just .btn-primary:hover) - needs to outrank
+   .btn:hover's own background rule above, which otherwise applies too (equal
+   specificity, different property) and washes the button out to a
+   translucent gray with barely-visible white text. */
+.btn.btn-primary:hover {
+  background: var(--accent);
+  filter: brightness(0.9);
+}
+
+.btn-small { font-size: 11px; padding: 4px 8px; }

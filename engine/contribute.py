@@ -1,23 +1,19 @@
-"""Opt-out training-data contribution pipeline.
+"""Local-only training-data capture pipeline.
 
 On a rising-edge CAT_BUTT detection, main.py calls capture() with the current
 frame and the CAT_00 (whole-cat) box - crops are limited to that box, never
 the full frame, so bystanders/background outside the cat aren't captured.
-Crops are written to a local pending-upload queue rather than uploaded inline,
-so a slow or failed upload never blocks the real-time video loop; a background
-thread drains the queue independently.
 
-Uploads go to whatever REARAWARE_CONTRIBUTE_URL points at (the rearaware.com
-app-contribute route, once it exists) with a shared secret in a header. That's
-a weak form of auth on its own - an extracted secret could be used to spam the
-endpoint - but everything here is manually reviewed before it ever reaches the
-training set, so the worst case is a reviewer deleting junk.
+This module only ever writes to a local queue directory - it does not upload
+anything. Review and upload are handled entirely on the Electron side (see
+desktop/src/main/contributions.js), which shows the user each captured crop
+and only sends the ones they explicitly approve. Nothing leaves the device
+without that per-image approval.
 """
 
 from __future__ import annotations
 
 import json
-import os
 import threading
 import time
 from dataclasses import asdict, dataclass
@@ -25,15 +21,17 @@ from datetime import date
 from pathlib import Path
 
 import cv2
-import requests
 
 from detector import Box
-from protocol import emit, log
+from protocol import emit
 
 DAILY_CAPTURE_CAP = 50
-UPLOAD_INTERVAL_SECONDS = 30
-MAX_UPLOAD_ATTEMPTS = 5
 JPEG_QUALITY = 90
+
+# Anything still sitting unreviewed after this long gets deleted rather than
+# accumulating forever - this is local-only data nobody has actively decided
+# to keep, so it shouldn't just pile up indefinitely.
+RETENTION_DAYS = 30
 
 
 @dataclass
@@ -43,7 +41,6 @@ class CaptureMeta:
     butt_score: float
     butt_box_relative: dict  # {x1,y1,x2,y2} in 0..1, position of the butt box within the crop
     captured_at: str
-    attempts: int = 0
 
 
 class ContributionPipeline:
@@ -52,30 +49,31 @@ class ContributionPipeline:
         self.queue_dir.mkdir(parents=True, exist_ok=True)
         self._state_path = queue_dir / "state.json"
         self._lock = threading.Lock()
+        self._expire_stale_captures()
 
-        self._endpoint = os.environ.get("REARAWARE_CONTRIBUTE_URL")
-        self._api_key = os.environ.get("REARAWARE_CONTRIBUTE_KEY")
-        if not self._endpoint or not self._api_key:
-            log(
-                "REARAWARE_CONTRIBUTE_URL/KEY not set - contribution capture will "
-                "queue locally but uploads will stay pending until configured."
-            )
+    def capture(self, frame, cat_box: Box, butt_box: Box, model_version: str) -> int | None:
+        """Returns the new total queued (unreviewed) count, or None if this
+        capture was skipped (daily cap reached, or a degenerate crop box)."""
 
-    # ---------------------------------------------------------------- capture
-
-    def capture(self, frame, cat_box: Box, butt_box: Box, model_version: str) -> bool:
         if not self._consume_daily_cap():
-            return False
+            return None
 
         x1, y1 = max(0, cat_box.x1), max(0, cat_box.y1)
         x2, y2 = min(frame.shape[1], cat_box.x2), min(frame.shape[0], cat_box.y2)
         if x2 <= x1 or y2 <= y1:
-            return False
+            return None
 
-        crop = frame[y1:y2, x1:x2]
+        # .copy() rather than a view: main.py already calls capture() before
+        # any overlay drawing touches `frame`, but a plain slice would still
+        # be a view into the same array - if a future change ever drew on
+        # `frame` before this ran, the crop written below would silently
+        # pick up those pixels too (exactly the bug this call ordering fixes
+        # today). Cheap insurance against that regression.
+        crop = frame[y1:y2, x1:x2].copy()
 
-        # butt_box in coordinates relative to the crop, normalized 0..1 -
-        # lets a reviewer/annotator start from a pre-populated box.
+        # butt_box in coordinates relative to the crop, normalized 0..1 - lets
+        # the review UI (and later, re-annotation in Ultralytics) start from a
+        # pre-populated box instead of from scratch.
         crop_w, crop_h = x2 - x1, y2 - y1
         relative_butt_box = {
             "x1": max(0.0, (butt_box.x1 - x1) / crop_w),
@@ -99,7 +97,10 @@ class ContributionPipeline:
         )
         meta_path.write_text(json.dumps(asdict(meta)))
 
-        return True
+        return self._pending_count()
+
+    def _pending_count(self) -> int:
+        return sum(1 for p in self.queue_dir.glob("*.json") if p.name != "state.json")
 
     def _consume_daily_cap(self) -> bool:
         with self._lock:
@@ -120,66 +121,19 @@ class ContributionPipeline:
             self._state_path.write_text(json.dumps(state))
             return True
 
-    # ----------------------------------------------------------------- upload
+    def _expire_stale_captures(self) -> None:
+        cutoff = time.time() - RETENTION_DAYS * 86400
+        expired = 0
 
-    def start_uploader_thread(self) -> threading.Thread:
-        thread = threading.Thread(target=self._upload_loop, name="contribute-uploader", daemon=True)
-        thread.start()
-        return thread
-
-    def _upload_loop(self) -> None:
-        while True:
-            try:
-                self._upload_pending_batch()
-            except Exception as err:  # pragma: no cover - defensive, keep the thread alive
-                log(f"contribution uploader error: {err}")
-            time.sleep(UPLOAD_INTERVAL_SECONDS)
-
-    def _upload_pending_batch(self) -> None:
-        uploaded = failed = 0
-
-        for meta_path in sorted(self.queue_dir.glob("*.json")):
+        for meta_path in self.queue_dir.glob("*.json"):
             if meta_path.name == "state.json":
                 continue
-
-            image_path = meta_path.with_suffix(".jpg")
-            if not image_path.exists():
-                meta_path.unlink(missing_ok=True)
+            if meta_path.stat().st_mtime >= cutoff:
                 continue
 
-            if not self._endpoint or not self._api_key:
-                continue  # stay queued until the backend is configured
+            meta_path.unlink(missing_ok=True)
+            meta_path.with_suffix(".jpg").unlink(missing_ok=True)
+            expired += 1
 
-            meta = json.loads(meta_path.read_text())
-            if self._upload_one(image_path, meta):
-                image_path.unlink(missing_ok=True)
-                meta_path.unlink(missing_ok=True)
-                uploaded += 1
-            else:
-                meta["attempts"] = meta.get("attempts", 0) + 1
-                if meta["attempts"] >= MAX_UPLOAD_ATTEMPTS:
-                    log(f"dropping {image_path.name} after {meta['attempts']} failed upload attempts")
-                    image_path.unlink(missing_ok=True)
-                    meta_path.unlink(missing_ok=True)
-                    failed += 1
-                else:
-                    meta_path.write_text(json.dumps(meta))
-
-        remaining = sum(1 for p in self.queue_dir.glob("*.json") if p.name != "state.json")
-        if uploaded or failed:
-            emit({"type": "contribute_status", "queued": remaining, "uploaded": uploaded, "failed": failed})
-
-    def _upload_one(self, image_path: Path, meta: dict) -> bool:
-        try:
-            with image_path.open("rb") as img_file:
-                response = requests.post(
-                    self._endpoint,
-                    headers={"X-RearAware-Key": self._api_key},
-                    files={"image": (image_path.name, img_file, "image/jpeg")},
-                    data={"metadata": json.dumps(meta)},
-                    timeout=15,
-                )
-            return response.ok
-        except requests.RequestException as err:
-            log(f"upload failed for {image_path.name}: {err}")
-            return False
+        if expired:
+            emit({"type": "contribute_expired", "count": expired})

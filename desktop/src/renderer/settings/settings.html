@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>RearAware</title>
+<link rel="stylesheet" href="settings.css">
+</head>
+<body>
+
+<div class="tabs" role="tablist">
+  <button class="tab" role="tab" aria-selected="true" data-tab="general">
+    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M10.325 4.317C10.751 2.561 13.249 2.561 13.675 4.317C13.7389 4.5808 13.8642 4.82578 14.0407 5.032C14.2172 5.23822 14.4399 5.39985 14.6907 5.50375C14.9414 5.60764 15.2132 5.65085 15.4838 5.62987C15.7544 5.60889 16.0162 5.5243 16.248 5.383C17.791 4.443 19.558 6.209 18.618 7.753C18.4769 7.98466 18.3924 8.24634 18.3715 8.51677C18.3506 8.78721 18.3938 9.05877 18.4975 9.30938C18.6013 9.55999 18.7627 9.78258 18.9687 9.95905C19.1747 10.1355 19.4194 10.2609 19.683 10.325C21.439 10.751 21.439 13.249 19.683 13.675C19.4192 13.7389 19.1742 13.8642 18.968 14.0407C18.7618 14.2172 18.6001 14.4399 18.4963 14.6907C18.3924 14.9414 18.3491 15.2132 18.3701 15.4838C18.3911 15.7544 18.4757 16.0162 18.617 16.248C19.557 17.791 17.791 19.558 16.247 18.618C16.0153 18.4769 15.7537 18.3924 15.4832 18.3715C15.2128 18.3506 14.9412 18.3938 14.6906 18.4975C14.44 18.6013 14.2174 18.7627 14.0409 18.9687C13.8645 19.1747 13.7391 19.4194 13.675 19.683C13.249 21.439 10.751 21.439 10.325 19.683C10.2611 19.4192 10.1358 19.1742 9.95929 18.968C9.7828 18.7618 9.56011 18.6001 9.30935 18.4963C9.05859 18.3924 8.78683 18.3491 8.51621 18.3701C8.24559 18.3911 7.98375 18.4757 7.752 18.617C6.209 19.557 4.442 17.791 5.382 16.247C5.5231 16.0153 5.60755 15.7537 5.62848 15.4832C5.64942 15.2128 5.60624 14.9412 5.50247 14.6906C5.3987 14.44 5.23726 14.2174 5.03127 14.0409C4.82529 13.8645 4.58056 13.7391 4.317 13.675C2.561 13.249 2.561 10.751 4.317 10.325C4.5808 10.2611 4.82578 10.1358 5.032 9.95929C5.23822 9.7828 5.39985 9.56011 5.50375 9.30935C5.60764 9.05859 5.65085 8.78683 5.62987 8.51621C5.60889 8.24559 5.5243 7.98375 5.383 7.752C4.443 6.209 6.209 4.442 7.753 5.382C8.753 5.99 10.049 5.452 10.325 4.317Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M9 12C9 12.7956 9.31607 13.5587 9.87868 14.1213C10.4413 14.6839 11.2044 15 12 15C12.7956 15 13.5587 14.6839 14.1213 14.1213C14.6839 13.5587 15 12.7956 15 12C15 11.2044 14.6839 10.4413 14.1213 9.87868C13.5587 9.31607 12.7956 9 12 9C11.2044 9 10.4413 9.31607 9.87868 9.87868C9.31607 10.4413 9 11.2044 9 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    General
+  </button>
+  <button class="tab" role="tab" aria-selected="false" data-tab="training">
+    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M16 5H22M19 2V8M21 11.5V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H12.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M21 15.0002L17.914 11.9142C17.5389 11.5392 17.0303 11.3286 16.5 11.3286C15.9697 11.3286 15.4611 11.5392 15.086 11.9142L6 21.0002" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M9 11C10.1046 11 11 10.1046 11 9C11 7.89543 10.1046 7 9 7C7.89543 7 7 7.89543 7 9C7 10.1046 7.89543 11 9 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Training
+  </button>
+</div>
+
+<div class="panel" id="panelGeneral" role="tabpanel">
+
+  <div class="field field-row">
+    <label class="checkbox-label"><input type="checkbox" id="loginCheckbox" /> Launch at login</label>
+  </div>
+
+  <fieldset id="detectionFieldset" class="fieldset">
+    <div class="field">
+      <div class="field-row">
+        <label for="thresholdSlider">Confidence threshold</label>
+        <span class="field-value" id="thresholdValue">22%</span>
+      </div>
+      <input type="range" min="0" max="100" value="22" step="1" id="thresholdSlider" />
+      <p class="help-text">Lower values are more likely to detect cats, but may increase false positives.</p>
+    </div>
+
+    <div class="field field-row">
+      <label for="obfuscationSelect">Obfuscation type</label>
+      <select id="obfuscationSelect">
+        <option value="standard">Standard</option>
+        <option value="all-seeing">All-Seeing</option>
+        <option value="nicolas-cage">Nicolas Cage</option>
+      </select>
+    </div>
+
+    <div class="field field-row">
+      <label class="checkbox-label"><input type="checkbox" id="soundCheckbox" /> Audio feedback</label>
+    </div>
+
+    <div class="section-label">Developer mode</div>
+    <div class="field field-row">
+      <label class="checkbox-label"><input type="checkbox" id="debugCheckbox" /> Bounding boxes (debug)</label>
+    </div>
+  </fieldset>
+
+</div>
+
+<div class="panel" id="panelTraining" role="tabpanel" hidden>
+
+  <div class="field">
+    <span class="section-heading">Help improve RearAware</span>
+    <p class="help-text">
+      RearAware is still an experimental project and relies on real cat photos to train its AI model. While I have
+      plenty of cat photos, only a small number contain visible cat butts. That's currently the biggest limitation
+      of the model, and why detection is still hit and miss.
+    </p>
+    <p class="help-text">If you'd like to help improve RearAware, there are two ways to contribute:</p>
+    <ul class="help-list">
+      <li>Upload your own cat butt photos directly.</li>
+      <li>Let RearAware capture images during your video calls for you to review before uploading.</li>
+    </ul>
+  </div>
+
+  <hr class="divider" />
+
+  <div class="field">
+    <span class="section-heading">Contribute your own cat butt photos</span>
+    <button class="btn" id="uploadPhotosBtn" type="button">Upload photos...</button>
+  </div>
+
+  <hr class="divider" />
+
+  <div class="field field-row">
+    <label class="checkbox-label"><input type="checkbox" id="contributeCheckbox" /> Allow RearAware to capture training images</label>
+  </div>
+  <p class="help-text">
+    When enabled, RearAware saves cropped images of detected cats locally on your computer for later review. Images
+    are cropped around the detected cat to minimise the amount of personal or identifiable information captured.
+    Nothing leaves your computer until you choose to send it. I'll personally review every submitted image before
+    it's added to the training dataset.
+  </p>
+
+  <div class="training-header">
+    <span class="section-heading" id="reviewCountLabel">No images awaiting review.</span>
+    <div class="training-actions" id="trainingActions" hidden>
+      <button class="btn" id="deleteAllBtn" type="button">Delete All</button>
+      <button class="btn btn-primary" id="sendAllBtn" type="button">Send All</button>
+    </div>
+  </div>
+
+  <div class="review-grid" id="reviewGrid"></div>
+
+</div>
+
+<template id="cardTemplate">
+  <div class="card">
+    <div class="thumb-wrap">
+      <img class="thumb" alt="Detected cat" />
+      <div class="butt-box"></div>
+    </div>
+    <div class="card-actions">
+      <button class="btn btn-small" data-action="reject" type="button">Delete</button>
+      <button class="btn btn-small btn-primary" data-action="approve" type="button">Send</button>
+    </div>
+  </div>
+</template>
+
+<script src="settings.js"></script>
+</body>
+</html>

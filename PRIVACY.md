@@ -10,19 +10,19 @@ This policy differs from the [Chrome extension's privacy policy](https://github.
 
 Webcam frames are read directly from your camera, processed locally by an on-device AI model, composited with your chosen censor overlay, and sent to the virtual camera output. At no point does a raw or censored video frame leave your device as part of normal detection and censoring - that part works exactly like the Chrome extension.
 
-## Help improve the model (on by default)
+## Help improve the model (on by default, nothing sent without your say-so)
 
-The app includes a feature to help train better cat-butt detection, since the model is currently trained on very few examples. **This is on by default**, and you can turn it off at any time from the "Help improve the model" toggle in Settings.
-
-When this is on:
+The app includes a feature to help train better cat-butt detection, since the model is currently trained on very few examples. **Local capture is on by default**, and you can turn it off at any time from the "Help improve the model" toggle in Settings - but nothing is ever sent off your device automatically, regardless of that toggle. Here's exactly how it works:
 
 - When a cat is detected, the frame is cropped tightly to just the cat's bounding box - never the rest of your room, and never anyone else who happens to be in frame. Nothing outside that box is ever captured or stored.
 - Captures are limited to roughly once per detection (not continuously) and capped per day, so this isn't recording a stream of your webcam.
-- Cropped images are uploaded to a private cloud storage bucket, along with basic technical metadata (detection confidence scores, the model version, a timestamp, and the position of the detected area within the crop). This metadata contains no personal information.
-- Every uploaded image is **manually reviewed by the developer** before it is ever used for anything. Nothing is added to model training data automatically.
-- Uploaded images are not publicly accessible - the storage bucket requires authentication to read, and images aren't shared with any third party.
+- Crops are saved **locally on your device only**. Nothing is uploaded automatically.
+- To actually send anything, you open **"Review Photos"** (from the tray/menu bar icon, or a shortcut in Settings), where every captured photo is shown to you individually - along with what the model detected in it - before you decide anything. You choose, photo by photo (or in bulk), to either **Send** it (uploads it to a private cloud storage bucket, along with basic technical metadata: confidence scores, model version, timestamp, and the position of the detected area within the crop - no personal information) or **Delete** it (permanently removed, never leaves your device).
+- Anything left unreviewed for 30 days is automatically deleted from your device, so nothing accumulates indefinitely from a feature you're not actively using.
+- Every image you do send is still **manually reviewed by the developer** again before it's ever used for anything. Nothing is added to model training data automatically, even after you've sent it.
+- Sent images are not publicly accessible - the storage bucket requires authentication to read, and images aren't shared with any third party.
 
-To turn this off: open RearAware's settings from the tray/menu bar icon and switch off "Help improve the model." No further captures or uploads happen once it's off, and anything already queued locally but not yet uploaded is discarded.
+To turn off local capture entirely: open RearAware's settings from the tray/menu bar icon and switch off "Help improve the model." Turning this off only stops new photos from being captured - it doesn't affect anything you've already chosen to send.
 
 ## Other data collected
 
