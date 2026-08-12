@@ -19,16 +19,22 @@ const DISPLAY_VERSION = `${require("../../package.json").version} Beta`;
 // fallback dialog below.
 const APP_ICON_PATH = path.join(getAssetsDir(), "icons", "app-icon-1024.png");
 
-// Dev-only: loads REARAWARE_CONTRIBUTE_URL/KEY from desktop/.env (gitignored,
-// see .env.example) into process.env, which sidecar.js's spawn() then
-// inherits and passes through to the Python engine. Packaged builds will
-// need a real config story for this in Phase 4 - a plain .env file next to
-// the app isn't it.
+// Loads REARAWARE_CONTRIBUTE_URL/KEY into process.env - read directly by
+// contributions.js when a photo is approved (the Python engine has no
+// networking code at all, it only ever writes to the local queue).
+// In dev mode this is desktop/.env (gitignored, see .env.example). In a
+// packaged build there's no repo checkout to find that file in, so
+// electron-builder copies the same local .env into the app's own Resources
+// folder at build time instead (see extraResources in package.json) - the
+// file itself still never touches git either way.
 try {
-  process.loadEnvFile(path.join(__dirname, "..", "..", ".env"));
+  const envPath = app.isPackaged
+    ? path.join(process.resourcesPath, ".env")
+    : path.join(__dirname, "..", "..", ".env");
+  process.loadEnvFile(envPath);
 } catch {
   // No .env present (e.g. fresh checkout without contribution testing set up) - fine, the
-  // engine already degrades gracefully when these are unset (see contribute.py).
+  // upload path already degrades to a clear error if approve() is used without it configured.
 }
 
 // RearAware is meant to keep running as a background tray app long after

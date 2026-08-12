@@ -28,6 +28,7 @@ from detector import Detector  # noqa: E402
 from overlay import StickerLibrary, apply_sticker, draw_debug_boxes  # noqa: E402
 from protocol import emit, log, start_command_listener  # noqa: E402
 from settings import Settings  # noqa: E402
+from smoothing import BoxSmoother  # noqa: E402
 from sounds import play_random_sound  # noqa: E402
 
 # Read-only bundled resources (model weights, sticker/sound assets). In a
@@ -70,6 +71,7 @@ class Engine:
         self.detector = Detector(MODEL_PATH)
         self.stickers = StickerLibrary(ASSETS_DIR)
         self.contribution = ContributionPipeline(QUEUE_DIR)
+        self.box_smoother = BoxSmoother()
         # Opened lazily, only while detection is actually enabled - not held
         # for as long as the engine process merely exists. Otherwise the
         # webcam (and its indicator light) stay active the whole time
@@ -78,7 +80,13 @@ class Engine:
         self.camera = None
         self._last_camera_attempt = 0.0
 
+        # Guards _last_results and _detect_busy, both written from the
+        # background detection thread spawned by _maybe_submit_detection()
+        # and read from the main tick loop.
+        self._detect_lock = threading.Lock()
+        self._detect_busy = False
         self._last_results = [None, None, None]
+
         self._butt_was_visible = False
         self._last_sound_time = 0.0
         self._frame_count = 0
@@ -132,6 +140,34 @@ class Engine:
         emit({"type": "camera_released"})
         log("camera released")
 
+    def _maybe_submit_detection(self, frame, score_threshold: float) -> None:
+        # Model inference is the one variably-slow step in this loop - run it
+        # off the main thread so it can never delay a frame that's about to
+        # be sent to the virtual camera. Without this, send() timing
+        # alternates between "fast tick" (no detection) and "slow tick"
+        # (detection), and that irregular delivery cadence is what several
+        # meeting apps' own auto-exposure/background-effects processing
+        # visibly reacts to as flicker - a real virtual camera (e.g. OBS's)
+        # never has this problem because its capture/output pipeline is
+        # decoupled from any per-frame ML work the way this one now is.
+        with self._detect_lock:
+            if self._detect_busy:
+                return  # previous detection still running - use last results, don't pile up work
+            self._detect_busy = True
+
+        frame_for_detection = frame.copy()  # this tick's frame is about to be mutated (sticker) and sent
+
+        def _run() -> None:
+            try:
+                results = self.detector.detect(frame_for_detection, score_threshold)
+                with self._detect_lock:
+                    self._last_results = results
+            finally:
+                with self._detect_lock:
+                    self._detect_busy = False
+
+        threading.Thread(target=_run, daemon=True).start()
+
     def _tick(self) -> None:
         settings = self.current_settings()
 
@@ -156,29 +192,42 @@ class Engine:
         self._frame_count += 1
 
         if self._frame_count % DETECT_EVERY_N_FRAMES == 0:
-            self._last_results = self.detector.detect(frame, settings.score_threshold)
+            self._maybe_submit_detection(frame, settings.score_threshold)
 
-        cat_box, _face_box, butt_box = self._last_results
+        with self._detect_lock:
+            last_results = self._last_results
+        cat_box, _face_box, butt_box = last_results
+
+        # Held over across brief gaps in raw detection and eased toward its
+        # target position every tick (not just detection ticks), so the
+        # sticker doesn't flicker off or jump around between passes - see
+        # smoothing.py. Rising-edge tracking below is based on this smoothed
+        # presence (what the user actually perceives), not the raw per-tick
+        # result, so sound/capture fire once per visible episode rather than
+        # once per raw detection blip within it.
+        smoothed_butt_box = self.box_smoother.update(butt_box)
 
         # Computed once, before either handler below runs, and butt_was_visible
         # is only updated once at the end of this tick - both handlers need to
         # see "did this just newly appear," not "is it visible right now."
-        detected = butt_box is not None
+        detected = smoothed_butt_box is not None
         is_rising_edge = detected and not self._butt_was_visible
 
         # Must run before the overlay drawing below - apply_sticker() and
         # draw_debug_boxes() both mutate `frame` in place, and a contribution
         # capture needs the actual raw detected cat, not our own censor
-        # sticker (or debug boxes) painted over it.
+        # sticker (or debug boxes) painted over it. Uses the raw butt_box
+        # (not smoothed) since it's a one-shot crop, not a rendered overlay -
+        # the real detection is what's worth keeping for training.
         self._handle_contribution(settings, frame, cat_box, butt_box, is_rising_edge)
 
         if settings.debugEnabled:
-            draw_debug_boxes(frame, self._last_results)
-        elif butt_box is not None:
-            apply_sticker(frame, butt_box, settings.obfuscation, self.stickers)
+            draw_debug_boxes(frame, last_results)
+        elif smoothed_butt_box is not None:
+            apply_sticker(frame, smoothed_butt_box, settings.obfuscation, self.stickers)
 
         self._handle_sound(settings, is_rising_edge)
-        self._emit_status(settings)
+        self._emit_status(last_results)
 
         self._butt_was_visible = detected
 
@@ -207,15 +256,15 @@ class Engine:
         if queued_count is not None:
             emit({"type": "contribute_captured", "queued": queued_count})
 
-    def _emit_status(self, settings: Settings) -> None:
+    def _emit_status(self, last_results) -> None:
         if self._frame_count % STATUS_EVERY_N_FRAMES != 0:
             return
 
         scores = {
             name: (box.score if box else None)
-            for name, box in zip(["cat", "face", "butt"], self._last_results)
+            for name, box in zip(["cat", "face", "butt"], last_results)
         }
-        emit({"type": "status", "detected": self._last_results[CAT_BUTT] is not None, "scores": scores})
+        emit({"type": "status", "detected": last_results[CAT_BUTT] is not None, "scores": scores})
 
 
 def main() -> None:

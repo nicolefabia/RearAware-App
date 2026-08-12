@@ -1,6 +1,6 @@
 {
   "name": "rearaware-desktop",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "RearAware desktop app - detects and censors cat butts in your webcam feed via a virtual camera.",
   "main": "src/main/index.js",
   "private": true,
@@ -34,12 +34,18 @@
         "from": "../assets",
         "to": "assets",
         "filter": ["**/*"]
+      },
+      {
+        "from": ".env",
+        "to": ".env"
       }
     ],
     "mac": {
       "icon": "../assets/icons/app-icon.icns",
       "category": "public.app-category.utilities",
       "target": ["dmg"],
+      "identity": "-",
+      "hardenedRuntime": false,
       "extendInfo": {
         "NSCameraUsageDescription": "RearAware needs camera access to detect and censor cats in your webcam feed.",
         "LSUIElement": true
